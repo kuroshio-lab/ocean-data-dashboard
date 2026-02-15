@@ -4,6 +4,7 @@ Service for fetching ocean data from NOAA ERDDAP.
 import requests
 import logging
 from datetime import datetime, timedelta
+from urllib.parse import quote
 from django.conf import settings
 from django.utils import timezone
 from api.models import (
@@ -54,15 +55,14 @@ class NOAAERDDAPService:
             end_time = timezone.now()
             start_time = end_time - timedelta(days=days_back)
             
-            # Build ERDDAP query URL
-            url = f"{self.base_url}tabledap/{dataset_id}.json"
-            params = {
-                'time>=': start_time.strftime('%Y-%m-%dT%H:%M:%SZ'),
-                'time<=': end_time.strftime('%Y-%m-%dT%H:%M:%SZ'),
-            }
+            # Build ERDDAP query URL (all constraints must be preceded by '&' per ERDDAP)
+            start_str = start_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+            end_str = end_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+            query = f"&time>={quote(start_str, safe='')}&time<={quote(end_str, safe='')}"
+            url = f"{self.base_url}tabledap/{dataset_id}.json?{query}"
             
             logger.info(f"Fetching NOAA data from {url}")
-            response = requests.get(url, params=params, timeout=60)
+            response = requests.get(url, timeout=60)
             response.raise_for_status()
             
             data = response.json()
