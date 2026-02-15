@@ -1,0 +1,98 @@
+[tool.poetry]
+name = "ocean-data-dashboard"
+version = "0.1.0"
+description = "Django backend for Ocean Data Dashboard"
+authors = ["Victor Bostaetetr <admin@kuroshio-lab.com>"]
+readme = "README.md"
+packages = [{include = "api"}, {include = "celery_app"}, {include = "core"}, {include = "data_ingestion"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+# Django Framework
+Django = "^4.2.10"
+djangorestframework = "^3.14.0"
+django-cors-headers = "^4.3.1"
+django-filter = "^23.5"
+
+# Database
+psycopg2-binary = "^2.9.9"
+dj-database-url = "^2.1.0"
+
+# Celery & Task Queue
+celery = "^5.3.4"
+redis = "^5.0.1"
+django-celery-beat = "^2.6.0"
+django-celery-results = "^2.5.1"
+
+# API & Data Processing
+requests = "^2.31.0"
+pandas = "^2.1.4"
+numpy = "^1.26.2"
+xarray = "^2023.12.0"
+netCDF4 = "^1.6.5"
+
+# Environment & Configuration
+python-decouple = "^3.8"
+python-dotenv = "^1.0.0"
+
+# API Documentation
+drf-spectacular = "^0.27.0"
+
+# WSGI Server
+gunicorn = "^21.2.0"
+
+# Monitoring & Logging
+sentry-sdk = "^1.39.1"
+
+# Date & Time
+python-dateutil = "^2.8.2"
+pytz = "^2023.3"
+
+# Utilities
+httpx = "^0.25.2"
+aiohttp = "^3.9.1"
+
+[tool.poetry.group.dev.dependencies]
+# Testing
+pytest = "^7.4.3"
+pytest-django = "^4.7.0"
+pytest-cov = "^4.1.0"
+factory-boy = "^3.3.0"
+
+# Code Quality
+black = "^23.12.1"
+flake8 = "^7.0.0"
+isort = "^5.13.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "core.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+addopts = "--cov=. --cov-report=term-missing --cov-report=html"
