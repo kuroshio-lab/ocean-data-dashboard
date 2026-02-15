@@ -12,13 +12,23 @@ setup: ## Initial project setup (backend + frontend)
 	make frontend-setup
 	@echo "✓ Setup complete! Run 'make docker-up' to start services."
 
-backend-setup: ## Set up backend (Python environment)
+backend-setup: ## Set up backend (Python environment with Poetry)
 	@echo "Setting up backend..."
-	cd backend && python -m venv venv
-	cd backend && source venv/bin/activate && pip install --upgrade pip
-	cd backend && source venv/bin/activate && pip install -r requirements.txt
-	cd backend && cp .env.example .env
+	cd backend && poetry install --with dev
+	cd backend && cp .env.example .env 2>/dev/null || true
 	@echo "✓ Backend setup complete"
+
+poetry-add: ## Add a new dependency (use: make poetry-add PACKAGE=django)
+	cd backend && poetry add $(PACKAGE)
+
+poetry-add-dev: ## Add a new dev dependency (use: make poetry-add-dev PACKAGE=pytest)
+	cd backend && poetry add --group dev $(PACKAGE)
+
+poetry-update: ## Update all dependencies
+	cd backend && poetry update
+
+poetry-lock: ## Update poetry.lock file
+	cd backend && poetry lock
 
 frontend-setup: ## Set up frontend (Node.js)
 	@echo "Setting up frontend..."
@@ -60,14 +70,17 @@ shell: ## Open Django shell
 fetch-data: ## Fetch data from NOAA
 	docker-compose exec backend python manage.py fetch_noaa_data
 
-test-backend: ## Run backend tests
+test-backend: ## Run backend tests via Docker
 	docker-compose exec backend python manage.py test
+
+test-backend-local: ## Run backend tests locally with Poetry
+	cd backend && poetry run pytest
 
 test-frontend: ## Run frontend tests
 	cd frontend && npm test
 
 lint-backend: ## Lint backend code
-	cd backend && source venv/bin/activate && black . && isort . && flake8
+	cd backend && poetry run black . && poetry run isort . && poetry run flake8
 
 lint-frontend: ## Lint frontend code
 	cd frontend && npm run lint
