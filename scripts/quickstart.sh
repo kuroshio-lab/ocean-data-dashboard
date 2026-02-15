@@ -49,6 +49,10 @@ echo "Waiting for database to be ready..."
 sleep 5
 
 echo ""
+echo "Creating database migrations..."
+docker-compose exec -T backend python manage.py makemigrations api data_ingestion
+
+echo ""
 echo "Running database migrations..."
 docker-compose exec -T backend python manage.py migrate
 
