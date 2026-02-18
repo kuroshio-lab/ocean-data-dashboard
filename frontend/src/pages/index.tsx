@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
+import TemperatureChart from '@/components/TemperatureChart';
 import type { Location, DataSource } from '@/types';
 
 export default function Home() {
@@ -8,6 +9,14 @@ export default function Home() {
   const [sources, setSources] = useState<DataSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<number | undefined>(undefined);
+  const [hasTemperatureData, setHasTemperatureData] = useState(false);
+
+  // Calculate default date range (last 7 days)
+  const today = new Date().toISOString().split('T')[0];
+  const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(lastWeek);
+  const [endDate, setEndDate] = useState(today);
 
   useEffect(() => {
     loadData();
@@ -16,12 +25,19 @@ export default function Home() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [locationsData, sourcesData] = await Promise.all([
+      const [locationsData, sourcesData, tempData] = await Promise.all([
         api.getLocations(),
         api.getDataSources(),
+        api.getTemperatureObservations({ page: 1 }).catch(() => ({ count: 0 })),
       ]);
       setLocations(locationsData);
       setSources(sourcesData);
+      setHasTemperatureData(tempData.count > 0);
+
+      // Auto-select first location if available
+      if (locationsData.length > 0 && !selectedLocation) {
+        setSelectedLocation(locationsData[0].id);
+      }
     } catch (err) {
       setError('Failed to load data');
       console.error(err);
@@ -125,29 +141,59 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Quick Stats Card */}
+              {/* Temperature Chart Card */}
               <div className="bg-white rounded-lg shadow-md p-6 md:col-span-2">
-                <h2 className="text-2xl font-semibold text-ocean-900 mb-4">
-                  Getting Started
-                </h2>
-                <div className="prose max-w-none text-gray-700">
-                  <p className="mb-4">
-                    Welcome to the Ocean Data Dashboard! This platform provides real-time
-                    visualization of oceanographic data from leading scientific sources.
-                  </p>
-                  <h3 className="text-lg font-semibold text-ocean-800 mb-2">
-                    To start seeing data:
-                  </h3>
-                  <ol className="list-decimal list-inside space-y-2 mb-4">
-                    <li>Run data ingestion: <code className="bg-gray-100 px-2 py-1 rounded">python manage.py fetch_noaa_data</code></li>
-                    <li>Wait for data to populate (~1-2 minutes)</li>
-                    <li>Refresh this page to see visualizations</li>
-                  </ol>
-                  <p className="text-sm text-gray-600">
-                    Check the backend logs for ingestion status. Once data is available,
-                    interactive charts will appear here automatically.
-                  </p>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                  <h2 className="text-2xl font-semibold text-ocean-900">
+                    Temperature Data
+                  </h2>
+
+                  {/* Location Selector */}
+                  {locations.length > 0 && (
+                    <div className="mt-4 md:mt-0 flex items-center gap-2">
+                      <label className="text-sm text-gray-600">Location:</label>
+                      <select
+                        value={selectedLocation || ''}
+                        onChange={(e) => setSelectedLocation(Number(e.target.value))}
+                        className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ocean-500"
+                      >
+                        {locations.map((loc) => (
+                          <option key={loc.id} value={loc.id}>
+                            {loc.name} ({loc.latitude.toFixed(2)}°, {loc.longitude.toFixed(2)}°)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
+
+                {hasTemperatureData ? (
+                  <>
+                    <TemperatureChart
+                      locationId={selectedLocation}
+                      startDate={startDate}
+                      endDate={endDate}
+                    />
+                    {/* Date Range Info */}
+                    <p className="text-sm text-gray-500 mt-4 text-center">
+                      Showing data from {startDate} to {endDate}
+                    </p>
+                  </>
+                ) : (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-yellow-900 mb-2">
+                      No Temperature Data Available
+                    </h3>
+                    <p className="text-yellow-800 mb-4">
+                      To start seeing temperature data, run the NOAA data ingestion:
+                    </p>
+                    <ol className="list-decimal list-inside space-y-2 text-yellow-800">
+                      <li>Run: <code className="bg-yellow-100 px-2 py-1 rounded">docker-compose exec backend python manage.py fetch_noaa_data</code></li>
+                      <li>Wait for data to populate (~1-2 minutes)</li>
+                      <li>Refresh this page</li>
+                    </ol>
+                  </div>
+                )}
               </div>
             </div>
           )}
